@@ -1,0 +1,493 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Playwright Interview Coach</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: one working column — control deck on top, the answer sheet below, session log at the end. */
+:root{
+  --bg:#EEF2F0; --surface:#FFFFFF; --ink:#13201B; --muted:#5A6B64; --line:#D5DEDA;
+  --accent:#1D7556; --accent-ink:#FFFFFF; --accent-soft:#DCEFE6;
+  --speak:#A85E14; --speak-soft:#F6E8D8; --warn:#9C3B2E; --warn-soft:#F6E0DB;
+  --code-bg:#13201B; --code-fg:#DCE8E2; --say-bg:#F2F8F5;
+  --f-display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body:"Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --f-mono:"JetBrains Mono", Consolas, "Courier New", monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0E1412; --surface:#151D1A; --ink:#E4ECE8; --muted:#94A49D; --line:#26322D;
+  --accent:#4BC08A; --accent-ink:#08130E; --accent-soft:#17362A;
+  --speak:#E3A456; --speak-soft:#3A2A16; --warn:#E88676; --warn-soft:#3A1E19;
+  --code-bg:#09100D; --code-fg:#D3E1DA; --say-bg:#122520; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#0E1412; --surface:#151D1A; --ink:#E4ECE8; --muted:#94A49D; --line:#26322D;
+  --accent:#4BC08A; --accent-ink:#08130E; --accent-soft:#17362A;
+  --speak:#E3A456; --speak-soft:#3A2A16; --warn:#E88676; --warn-soft:#3A1E19;
+  --code-bg:#09100D; --code-fg:#D3E1DA; --say-bg:#122520; color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:17px/1.6 var(--f-body);padding-inline:16px;padding-block:20px 60px}
+.wrap{max-width:900px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+header.top{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+h1{font:700 1.45rem/1.2 var(--f-display);margin:0;letter-spacing:-.01em}
+h1 small{display:block;font:400 .85rem/1.4 var(--f-body);color:var(--muted);letter-spacing:0;margin-top:2px}
+.count{font:600 .78rem var(--f-mono);color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+
+/* control deck */
+.deck{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:center}
+.mic{width:96px;height:96px;border-radius:50%;border:0;cursor:pointer;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;position:relative;transition:transform .15s}
+.mic:hover{transform:scale(1.03)}
+.mic:focus-visible,button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+.mic svg{width:40px;height:40px}
+.mic[data-state="speaking"]{background:var(--speak)}
+.mic[data-state="off"]{background:var(--muted)}
+.mic::after{content:"";position:absolute;inset:-8px;border-radius:50%;border:3px solid var(--accent);opacity:0}
+.mic[data-state="listening"]::after{animation:pulse 1.4s ease-out infinite}
+@keyframes pulse{0%{opacity:.7;transform:scale(.92)}100%{opacity:0;transform:scale(1.25)}}
+@media (prefers-reduced-motion: reduce){.mic[data-state="listening"]::after{animation:none;opacity:.6}}
+.status{min-width:0;display:flex;flex-direction:column;gap:8px}
+.pill{align-self:flex-start;font:600 .78rem var(--f-mono);letter-spacing:.06em;text-transform:uppercase;padding:4px 10px;border-radius:999px;background:var(--accent-soft);color:var(--accent)}
+.pill[data-k="speaking"]{background:var(--speak-soft);color:var(--speak)}
+.pill[data-k="off"]{background:var(--bg);color:var(--muted)}
+.pill[data-k="error"]{background:var(--warn-soft);color:var(--warn)}
+.heard{font-size:1.05rem;min-height:1.6em;color:var(--ink)}
+.heard .interim{color:var(--muted)}
+.heard .ph{color:var(--muted)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.btn{font:600 .9rem var(--f-body);padding:8px 14px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn[hidden]{display:none}
+.countdown{font:600 .85rem var(--f-mono);color:var(--muted)}
+
+.settings{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;font-size:.9rem;color:var(--muted);padding:0 4px}
+.settings label{display:flex;gap:6px;align-items:center;cursor:pointer}
+.settings select,.settings input[type=range]{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:3px 6px}
+.settings input[type=range]{padding:0;width:90px;accent-color:var(--accent)}
+
+form.type{display:flex;gap:8px}
+form.type input{flex:1;min-width:0;font:inherit;font-size:1rem;padding:10px 12px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
+
+.loader{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:12px;align-items:flex-start}
+.loader h2{font:700 1.25rem/1.3 var(--f-display);margin:0}
+.loader p{margin:0;color:var(--muted);max-width:60ch}
+.filebtn{display:inline-block;padding:12px 18px;font-size:1rem}
+.loaderr{color:var(--warn)!important}
+.linkbtn{font:inherit;background:none;border:0;color:var(--accent);text-decoration:underline;cursor:pointer;padding:0}
+.notice{background:var(--warn-soft);color:var(--warn);border-radius:10px;padding:12px 14px;font-size:.95rem}
+
+/* answer sheet */
+.sheet{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:22px 22px 26px;min-width:0}
+.meta{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font:600 .75rem var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.meta .qn{color:var(--accent)}
+.meta .conf{padding:2px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent)}
+.meta .conf.weak{background:var(--warn-soft);color:var(--warn)}
+.qtitle{font:700 1.5rem/1.3 var(--f-display);margin:10px 0 16px;text-wrap:balance;letter-spacing:-.01em}
+.say{background:var(--say-bg);border-left:4px solid var(--accent);border-radius:0 10px 10px 0;padding:14px 16px;font-size:1.12rem;line-height:1.65}
+.say .lbl{display:block;font:600 .72rem var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:4px}
+.say .now{background:var(--speak-soft);border-radius:3px}
+.sec{margin-top:22px}
+.sec h3{font:600 .75rem var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 8px}
+.sec p{margin:0 0 10px;max-width:70ch}
+.sec ol{margin:0;padding-left:1.3em}
+.sec li{margin-bottom:4px}
+.sec.tip{background:var(--speak-soft);border-radius:10px;padding:12px 14px}
+.sec.tip h3{color:var(--speak)}
+pre{background:var(--code-bg);color:var(--code-fg);border-radius:10px;padding:14px 16px;overflow-x:auto;font:13.5px/1.55 var(--f-mono);margin:0;tab-size:2}
+.alts{margin-top:22px;padding-top:16px;border-top:1px solid var(--line)}
+.alts h3{font:600 .75rem var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 8px}
+.alts button{display:block;width:100%;text-align:left;font:inherit;font-size:.95rem;background:none;border:0;border-radius:8px;padding:8px 10px;color:var(--ink);cursor:pointer}
+.alts button:hover{background:var(--bg)}
+.alts .n{font:600 .8rem var(--f-mono);color:var(--accent);margin-right:8px}
+
+.empty h2{font:700 1.25rem/1.3 var(--f-display);margin:0 0 8px}
+.empty ol{margin:8px 0 0;padding-left:1.3em;color:var(--muted)}
+.empty p{color:var(--muted);margin:0}
+
+.log h3{font:600 .75rem var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 6px}
+.log ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+.log button{font:inherit;font-size:.9rem;background:none;border:0;padding:4px 0;color:var(--ink);cursor:pointer;text-align:left}
+.log button:hover{color:var(--accent)}
+.log .n{font:600 .78rem var(--f-mono);color:var(--muted);margin-right:8px;font-variant-numeric:tabular-nums}
+kbd{font:600 .75rem var(--f-mono);border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 5px;background:var(--surface)}
+.keys{font-size:.82rem;color:var(--muted)}
+
+@media (max-width:560px){
+  .deck{grid-template-columns:1fr;justify-items:center;text-align:center}
+  .status{align-items:center}.pill{align-self:center}
+  .row{justify-content:center}
+  .qtitle{font-size:1.25rem}
+  .sheet{padding:18px 16px 22px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>Playwright Interview Coach<small>Ask a question out loud. The answer shows here and is read aloud, then I listen for the next one.</small></h1>
+    <span class="count" id="count">300 questions loaded</span>
+  </header>
+
+  <div class="notice" id="unsupported" hidden>This browser can't do speech recognition. On a phone, open this page in <b>Chrome</b> (Android) or <b>Safari</b> (iPhone). On a computer, use Chrome or Edge. You can still type questions below.</div>
+  <div class="notice" id="micerr" hidden></div>
+
+  <section class="loader" id="loader" hidden>
+    <h2>Load your answers file</h2>
+    <p>This page keeps your PDF's answers on your phone, not online. Load the file <b>Playwright_Interview_Answers.json</b> once. After that it stays saved on this phone.</p>
+    <label class="btn primary filebtn" for="qaFile">Choose answers file</label>
+    <input type="file" id="qaFile" accept=".json,application/json,text/plain" hidden>
+    <p class="loaderr" id="loadErr" hidden>That file didn't work. Pick the file named Playwright_Interview_Answers.json.</p>
+  </section>
+
+  <section class="deck" id="deck" aria-label="Listening controls">
+    <button class="mic" id="mic" data-state="off" aria-label="Start listening">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/></svg>
+    </button>
+    <div class="status">
+      <span class="pill" id="pill" data-k="off">Tap the mic to start</span>
+      <div class="heard" id="heard"><span class="ph">Your question will appear here as you speak.</span></div>
+      <div class="row">
+        <button class="btn" id="skip" hidden>Stop reading &amp; listen</button>
+        <button class="btn" id="hold" hidden>Hold, I'm still reading</button>
+        <button class="btn primary" id="resume" hidden>Listen for next question</button>
+        <span class="countdown" id="cd"></span>
+      </div>
+    </div>
+  </section>
+
+  <div class="settings" id="settings">
+    <label><input type="checkbox" id="optSpeak" checked> Read answer aloud</label>
+    <label>Read <select id="optLen"><option value="short">short answer</option><option value="full">short + explanation</option></select></label>
+    <label>Speed <input type="range" id="optRate" min="0.7" max="1.5" step="0.05" value="1"></label>
+    <button class="linkbtn" id="reload" type="button" hidden>Load a different answers file</button>
+    <label>Accent <select id="optLang"><option value="en-IN">English (India)</option><option value="en-US">English (US)</option><option value="en-GB">English (UK)</option></select></label>
+  </div>
+
+  <form class="type" id="typeForm" autocomplete="off">
+    <input id="typeQ" placeholder="Or type a question, e.g. what is storageState  (or: question 45)" aria-label="Type a question">
+    <button class="btn primary" type="submit">Find answer</button>
+  </form>
+
+  <article class="sheet" id="sheet" aria-live="polite">
+    <div class="empty">
+      <h2>How it works</h2>
+      <ol>
+        <li>Tap the mic and allow microphone access when Chrome asks.</li>
+        <li>Ask any question from the 300 in your PDF, in your own words.</li>
+        <li>The best-matching answer appears here and is read aloud.</li>
+        <li>When the reading finishes, it starts listening again by itself.</li>
+      </ol>
+      <p style="margin-top:12px" class="keys">Keys: <kbd>Space</kbd> start or stop listening · <kbd>Esc</kbd> stop reading · <kbd>H</kbd> hold</p>
+    </div>
+  </article>
+
+  <section class="log" id="log" hidden>
+    <h3>Asked this session</h3>
+    <ul id="logList"></ul>
+  </section>
+</div>
+
+<script type="application/json" id="qa">[]</script>
+<script>
+(function(){
+const $ = id => document.getElementById(id);
+let QA = [];
+try { QA = JSON.parse(document.getElementById('qa').textContent); } catch(e) { QA = []; }
+const EMBEDDED = Array.isArray(QA) && QA.length > 0;
+const STORE_KEY = 'pw-coach-qa-v1';
+if(!EMBEDDED){ try { const s = localStorage.getItem(STORE_KEY); if(s) QA = JSON.parse(s); } catch(e) { QA = []; } }
+if(!Array.isArray(QA)) QA = [];
+
+/* ---------- matching ---------- */
+const STOP = new Set('a an the is are was were be been of to in on at for with and or but if then than what whats what\'s which who whom how do does did doing you your yours i me my we our us it its this that these those can could would should will shall may might must there here about tell explain describe give some any please kind like just also so as by from into over under between vs versus via one two same other more most very really okay ok well um uh actually basically mean'.split(' '));
+const PHRASES = [
+  [/\bplay\s*(right|write|rite|wright)\b/g,'playwright'],[/\bplaywrite\b/g,'playwright'],
+  [/\btype\s*script\b/g,'typescript'],[/\bjava\s*script\b/g,'javascript'],
+  [/\bx\s*path\b/g,'xpath'],[/\bi\s*frames?\b/g,'iframe'],[/\bshadow\s*dom\b/g,'shadow dom'],
+  [/\ba\s*p\s*i\b/g,'api'],[/\bc\s*i\s*\/?\s*c\s*d\b/g,'ci cd'],[/\bm\s*c\s*p\b/g,'mcp model context protocol'],
+  [/\bl\s*l\s*m\b/g,'llm'],[/\bh\s*a\s*r\b/g,'har'],[/\bp\s*o\s*m\b/g,'page object model'],
+  [/\bpom\b/g,'page object model'],[/\bpage object\b/g,'page object model'],
+  [/\bstorage\s*state\b/g,'storagestate'],[/\bwait\s*for\s*timeout\b/g,'waitfortimeout'],
+  [/\bto\s*pass\b/g,'topass'],[/\bdrag\s*(and|n|&)\s*drop\b/g,'drag drop'],
+  [/\bget\s*by\s*role\b/g,'getbyrole'],[/\bget\s*by\s*test\s*id\b/g,'getbytestid'],
+  [/\bweb\s*socket\b/g,'websocket'],[/\bdocker\b/g,'docker dockerize'],
+  [/\bgithub\s*actions?\b/g,'github actions'],[/\bflakey\b/g,'flaky'],[/\bflakiness\b/g,'flaky'],
+  [/\bself\s*healing\b/g,'self heal'],[/\bco\s*pilot\b/g,'copilot'],[/\bnull\s*ish\b/g,'nullish'],
+  [/\basync\s*await\b/g,'async await'],[/\bpromise\s*all\b/g,'promise all'],[/\bgenerics?\b/g,'generic'],
+  [/\bvar\s*(vs|versus|and)?\s*let\b/g,'var let const'],[/\bany\s*(vs|versus|and)?\s*unknown\b/g,'any unknown'],
+  [/\binter\s*face\b/g,'interface']
+];
+function stem(w){
+  if(w.length>5 && w.endsWith('ies')) return w.slice(0,-3)+'y';
+  if(w.length>5 && w.endsWith('ing')) return w.slice(0,-3);
+  if(w.length>4 && w.endsWith('ed')) return w.slice(0,-2);
+  if(w.length>4 && w.endsWith('es') && !w.endsWith('ses')) return w.slice(0,-2);
+  if(w.length>3 && w.endsWith('s') && !w.endsWith('ss')) return w.slice(0,-1);
+  return w;
+}
+function tokens(text){
+  const ids = (text.match(/[A-Za-z]+[A-Z][A-Za-z0-9]*/g)||[]).map(s=>s.toLowerCase());
+  let t = text.replace(/([a-z])([A-Z])/g,'$1 $2').toLowerCase();
+  t = ids.join(' ')+' '+t;
+  for(const [re,rep] of PHRASES) t=t.replace(re,rep);
+  return t.split(/[^a-z0-9]+/).filter(w=>w && !STOP.has(w) && !(w.length<2 && !/\d/.test(w))).map(stem);
+}
+function withBigrams(tk){const o=tk.slice();for(let i=0;i<tk.length-1;i++)o.push(tk[i]+'_'+tk[i+1]);return o;}
+let DF = new Map(), N = 0, VEC = [];
+const idf = k => Math.log(1+N/((DF.get(k)||0)+0.5));
+function buildIndex(){
+  DF = new Map(); N = QA.length;
+  const DOCS = QA.map(x=>{
+    const tf = new Map();
+    const add=(arr,w)=>arr.forEach(k=>tf.set(k,(tf.get(k)||0)+w));
+    add(withBigrams(tokens(x.q)),3); add(tokens(x.cat||''),1); add(tokens(x.s||''),0.6);
+    tf.forEach((_,k)=>DF.set(k,(DF.get(k)||0)+1));
+    return tf;
+  });
+  VEC = DOCS.map(tf=>{const v=new Map();let n=0;tf.forEach((c,k)=>{const w=(1+Math.log(c))*idf(k);v.set(k,w);n+=w*w});return {v,n:Math.sqrt(n)||1};});
+  $('count').textContent = N ? N + ' questions loaded' : 'No answers loaded yet';
+  $('loader').hidden = N > 0;
+  $('deck').hidden = N === 0; $('typeForm').hidden = N === 0; $('settings').hidden = N === 0;
+  $('reload').hidden = EMBEDDED || N === 0;
+}
+function loadFromText(txt){
+  const data = JSON.parse(txt);
+  if(!Array.isArray(data) || !data.length || !data[0].q) throw new Error('bad');
+  QA = data; try { localStorage.setItem(STORE_KEY, txt); } catch(e) {}
+  buildIndex();
+}
+function search(text){
+  const m = text.match(/\b(?:question|q)\s*(?:number|no\.?)?\s*(\d{1,3})\b/i);
+  if(m){const n=+m[1]; if(n>=1&&n<=N) return [{i:n-1,score:1,direct:true}];}
+  const qt = withBigrams(tokens(text)); if(!qt.length) return [];
+  const qv=new Map(); qt.forEach(k=>{ if(DF.has(k)) qv.set(k,(qv.get(k)||0)+1)});
+  let qn=0; qv.forEach((c,k)=>{const w=(1+Math.log(c))*idf(k);qv.set(k,w);qn+=w*w}); qn=Math.sqrt(qn)||1;
+  const res=[]; VEC.forEach((d,i)=>{let s=0;qv.forEach((w,k)=>{const dw=d.v.get(k); if(dw) s+=w*dw}); if(s>0) res.push({i,score:s/(qn*d.n)})});
+  // coverage: share of the query's meaningful words found in the question title
+  const uq=[...new Set(tokens(text))];
+  res.forEach(r=>{const tv=VEC[r.i].v;const hit=uq.filter(k=>tv.has(k)).length;r.score=r.score*0.7+0.3*(uq.length?hit/uq.length:0)});
+  return res.sort((a,b)=>b.score-a.score).slice(0,5);
+}
+
+/* ---------- rendering ---------- */
+const esc = s => String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const inlineCode = s => esc(s).replace(/`([^`]+)`/g,'<code>$1</code>');
+let current=null;
+function render(hit, alts, heardText){
+  const x = QA[hit.i]; current = x;
+  const conf = hit.direct ? 'Question '+x.n : hit.score>=0.45 ? 'Strong match' : hit.score>=0.28 ? 'Likely match' : 'Closest match';
+  const weak = !hit.direct && hit.score<0.28;
+  let h = `<div class="meta"><span class="qn">Q${x.n}</span><span>${esc(x.lvl)}</span>${x.cat?'<span>· '+esc(x.cat)+'</span>':''}<span class="conf${weak?' weak':''}">${conf}</span></div>`;
+  h += `<h2 class="qtitle">${inlineCode(x.q)}</h2>`;
+  h += `<div class="say" id="say"><span class="lbl">Say this</span><span id="sayText">${inlineCode(x.s)}</span></div>`;
+  for(const [head,kind,body] of x.sec){
+    if(['Interview Answer','Expected Approach'].includes(head) && body.join(' ')===x.s) continue;
+    const tip = head==='Interview Tip';
+    h += `<div class="sec${tip?' tip':''}"><h3>${esc(head)}</h3>`;
+    if(kind==='c') h += `<pre><code>${esc(body)}</code></pre>`;
+    else if(kind==='l') h += '<ol>'+body.map(b=>'<li>'+inlineCode(b)+'</li>').join('')+'</ol>';
+    else h += body.map(p=>'<p>'+inlineCode(p)+'</p>').join('');
+    h += '</div>';
+  }
+  const others = (alts||[]).filter(a=>a.i!==hit.i).slice(0,4);
+  if(others.length){
+    h += `<div class="alts"><h3>${weak?'Did you mean one of these?':'Other close matches'}</h3>`+
+      others.map(a=>`<button data-i="${a.i}"><span class="n">Q${QA[a.i].n}</span>${inlineCode(QA[a.i].q)}</button>`).join('')+'</div>';
+  }
+  $('sheet').innerHTML = h;
+  $('sheet').querySelectorAll('.alts button').forEach(b=>b.onclick=()=>{ stopAll(); show({i:+b.dataset.i,score:1,direct:true},[],'',true); });
+  $('sheet').scrollIntoView({behavior: matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth', block:'start'});
+}
+const LOG=[];
+function logIt(x){
+  if(LOG[0]===x.n) return; LOG.unshift(x.n);
+  $('log').hidden=false;
+  $('logList').innerHTML = LOG.slice(0,30).map(n=>`<li><button data-n="${n}"><span class="n">Q${n}</span>${inlineCode(QA[n-1].q)}</button></li>`).join('');
+  $('logList').querySelectorAll('button').forEach(b=>b.onclick=()=>{stopAll(); show({i:+b.dataset.n-1,score:1,direct:true},[],'',true);});
+}
+
+/* ---------- speech out ---------- */
+const synth = window.speechSynthesis;
+let voices=[];
+function loadVoices(){ voices = synth ? synth.getVoices() : []; }
+if(synth){ loadVoices(); synth.onvoiceschanged = loadVoices; }
+function pickVoice(){
+  const lang=$('optLang').value;
+  return voices.find(v=>v.lang===lang && /Google|Natural|Online/i.test(v.name)) || voices.find(v=>v.lang===lang) ||
+         voices.find(v=>v.lang.startsWith('en') && /Google|Natural|Online/i.test(v.name)) || voices.find(v=>v.lang.startsWith('en')) || null;
+}
+function speakable(s){ return s.replace(/`/g,'').replace(/\(\)/g,'').replace(/=>/g,' arrow ').replace(/\s+/g,' ').trim(); }
+function sentences(s){ return (s.match(/[^.!?]+[.!?]+(\s|$)|[^.!?]+$/g)||[s]).map(x=>x.trim()).filter(Boolean); }
+let speakToken=0;
+function speak(text, done){
+  if(!synth){ done(); return; }
+  synth.cancel();
+  const my = ++speakToken; const parts = sentences(speakable(text)); let k=0;
+  const v = pickVoice(), rate = +$('optRate').value;
+  const next = () => {
+    if(my!==speakToken) return;
+    if(k>=parts.length){ done(); return; }
+    const u = new SpeechSynthesisUtterance(parts[k++]);
+    if(v){u.voice=v;u.lang=v.lang;} else u.lang=$('optLang').value;
+    u.rate = rate;
+    u.onend = next; u.onerror = e => { if(e.error!=='interrupted' && e.error!=='canceled') next(); };
+    synth.speak(u);
+  };
+  next();
+}
+function stopSpeaking(){ speakToken++; if(synth) synth.cancel(); }
+
+/* ---------- speech in ---------- */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+const MOBILE = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || (navigator.maxTouchPoints>1 && /Macintosh/.test(navigator.userAgent));
+let unlocked=false, wakeLock=null;
+function unlockAudio(){
+  if(unlocked || !window.speechSynthesis) return; unlocked=true;
+  try{ const u=new SpeechSynthesisUtterance(' '); u.volume=0; speechSynthesis.speak(u); }catch(e){}
+}
+async function keepAwake(){
+  try{ if('wakeLock' in navigator && !wakeLock){ wakeLock = await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release',()=>{wakeLock=null}); } }catch(e){}
+}
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible' && wantListen) keepAwake(); });
+let rec=null, wantListen=false, finalText='', interimText='', silenceTimer=null, cdTimer=null, holding=false;
+const mic=$('mic'), pill=$('pill'), heard=$('heard');
+function setState(k,label){
+  pill.dataset.k=k; pill.textContent=label;
+  mic.dataset.state = k==='listening'?'listening':k==='speaking'?'speaking':k==='off'||k==='error'?'off':'idle';
+  mic.setAttribute('aria-label', k==='listening'?'Stop listening':'Start listening');
+}
+function showHeard(){
+  if(!finalText && !interimText){ heard.innerHTML='<span class="ph">Listening… ask your question.</span>'; return; }
+  heard.innerHTML = esc(finalText)+(interimText?' <span class="interim">'+esc(interimText)+'</span>':'');
+}
+function buttons({skip=false,hold=false,resume=false}={}){ $('skip').hidden=!skip; $('hold').hidden=!hold; $('resume').hidden=!resume; if(!hold) $('cd').textContent=''; }
+function clearCountdown(){ clearInterval(cdTimer); cdTimer=null; $('cd').textContent=''; }
+
+function startListening(){
+  clearCountdown(); stopSpeaking(); holding=false;
+  if(!SR){ setState('error','Speech recognition not available'); return; }
+  wantListen=true; finalText=''; interimText=''; showHeard();
+  buttons();
+  setState('listening','Listening');
+  try{ rec && rec.abort(); }catch(e){}
+  rec = new SR();
+  rec.lang = $('optLang').value; rec.continuous = !MOBILE; rec.interimResults = true; rec.maxAlternatives = 1;
+  rec.onresult = e => {
+    let fin='', intr='';
+    for(let i=0;i<e.results.length;i++){ const r=e.results[i]; if(r.isFinal) fin+=r[0].transcript+' '; else intr+=r[0].transcript; }
+    finalText=fin.trim(); interimText=intr.trim(); showHeard();
+    clearTimeout(silenceTimer);
+    silenceTimer = setTimeout(finishQuestion, finalText && !interimText ? 1300 : 2200);
+  };
+  rec.onerror = e => {
+    if(e.error==='not-allowed' || e.error==='service-not-allowed'){
+      wantListen=false; setState('error','Microphone blocked');
+      $('micerr').hidden=false;
+      $('micerr').innerHTML='Chrome blocked the microphone. Click the mic or lock icon in the address bar, set Microphone to <b>Allow</b>, then tap the mic button again.';
+    } else if(e.error==='network'){
+      setState('error','No internet'); $('micerr').hidden=false; $('micerr').textContent='Chrome speech recognition needs an internet connection. Check your connection and tap the mic again.'; wantListen=false;
+    }
+  };
+  rec.onend = () => {
+    if(!wantListen) return;
+    if(MOBILE && (finalText || interimText)){ clearTimeout(silenceTimer); finishQuestion(true); return; }
+    setTimeout(()=>{ if(wantListen){ try{ rec.start(); }catch(e){} } }, MOBILE ? 250 : 0);
+  };
+  try{ rec.start(); $('micerr').hidden=true; }catch(e){}
+}
+function stopListening(){
+  wantListen=false; clearTimeout(silenceTimer);
+  try{ rec && rec.abort(); }catch(e){}
+}
+function finishQuestion(fromEnd){
+  const q=(finalText+' '+interimText).trim();
+  if(q.split(/\s+/).length<2){ if(fromEnd && wantListen){ finalText='';interimText=''; try{ rec.start(); }catch(e){} } return; }   // ignore stray single words
+  stopListening();
+  const res = search(q);
+  heard.innerHTML = 'You asked: <b>'+esc(q)+'</b>';
+  if(!res.length){
+    setState('error','No match');
+    $('sheet').innerHTML='<div class="empty"><h2>No matching question found</h2><p>Try asking again with the key term, for example “what is storageState” or “question 45”.</p></div>';
+    afterAnswer(4); return;
+  }
+  show(res[0],res,q,false);
+}
+function show(hit,alts,q,manual){
+  render(hit,alts,q); logIt(QA[hit.i]);
+  if(manual) heard.innerHTML='Showing: <b>Q'+QA[hit.i].n+'</b>';
+  const x=QA[hit.i];
+  if($('optSpeak').checked && synth){
+    stopListening();
+    setState('speaking','Reading answer');
+    buttons({skip:true});
+    let text = x.s;
+    if($('optLen').value==='full'){
+      const d = x.sec.find(s=>s[0]==='Detailed Explanation'||s[0]==='Step-by-step Explanation');
+      if(d) text += ' ' + d[2].join(' ');
+    }
+    speak(text, ()=>{ afterAnswer(2); });
+  } else {
+    const words = x.s.split(/\s+/).length;
+    afterAnswer(Math.min(45, Math.max(8, Math.round(words/3.2))));
+  }
+}
+function afterAnswer(sec){
+  if(holding) return;
+  setState('idle','Next question in '+sec+'s');
+  buttons({hold:true,resume:true});
+  let left=sec; $('cd').textContent='';
+  clearCountdown();
+  cdTimer=setInterval(()=>{
+    left--; if(left<=0){ clearCountdown(); startListening(); return; }
+    setState('idle','Next question in '+left+'s');
+  },1000);
+}
+function hold(){
+  holding=true; clearCountdown(); stopSpeaking(); stopListening();
+  setState('off','On hold');
+  buttons({resume:true});
+}
+function stopAll(){ clearCountdown(); stopSpeaking(); stopListening(); holding=false; }
+
+mic.onclick = () => {
+  unlockAudio(); keepAwake();
+  if(mic.dataset.state==='listening'){ stopListening(); setState('off','Paused. Tap the mic to listen'); buttons({resume:false}); }
+  else startListening();
+};
+$('skip').onclick = () => { stopSpeaking(); startListening(); };
+$('hold').onclick = hold;
+$('resume').onclick = startListening;
+$('typeForm').onsubmit = e => {
+  e.preventDefault(); const q=$('typeQ').value.trim(); if(!q) return;
+  stopAll();
+  const res=search(q);
+  heard.innerHTML='You typed: <b>'+esc(q)+'</b>';
+  if(!res.length){ $('sheet').innerHTML='<div class="empty"><h2>No matching question found</h2><p>Try a key term, like “fixtures” or “question 45”.</p></div>'; return; }
+  show(res[0],res,q,false);
+};
+document.addEventListener('keydown',e=>{
+  if(e.target.matches('input,select,textarea')) return;
+  if(e.code==='Space'){ e.preventDefault(); mic.click(); }
+  else if(e.key==='Escape'){ if(mic.dataset.state==='speaking'){ stopSpeaking(); afterAnswer(2);} }
+  else if(e.key==='h'||e.key==='H'){ hold(); }
+});
+if(!SR){ $('unsupported').hidden=false; setState('error','Voice not supported here'); }
+$('qaFile').onchange = e => {
+  const f = e.target.files && e.target.files[0]; if(!f) return;
+  const r = new FileReader();
+  r.onload = () => { try{ loadFromText(String(r.result)); $('loadErr').hidden=true; }catch(err){ $('loadErr').hidden=false; } };
+  r.readAsText(f);
+};
+$('reload').onclick = () => { stopAll(); $('loader').hidden=false; $('qaFile').value=''; $('qaFile').click(); };
+buildIndex();
+})();
+</script>
+</body>
+</html>
